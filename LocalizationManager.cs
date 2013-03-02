@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Security.Permissions;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -24,10 +27,14 @@ namespace Localization
 		private static readonly Dictionary<string, LocalizationManager> s_loadedManagers =
 			new Dictionary<string, LocalizationManager>();
 
+		private static Icon _iconForProgressDialogInTaskBar;
+		private string m_tmxFileFolder;
+
 		internal Dictionary<object, string> ObjectCache { get; private set; }
 		internal Dictionary<Control, ToolTip> ToolTipCtrls { get; private set; }
 
 		#region Static methods for creating a LocalizationManager
+
 		/// ------------------------------------------------------------------------------------
 		/// <summary>
 		/// Creates a new instance of a localization manager for the specifed application id.
@@ -49,15 +56,17 @@ namespace Localization
 		/// found in 'installedTmxFilePath' so they can be edited by the user. If the
 		/// value is null, the default location is used (which is appName combined with
 		/// Environment.SpecialFolder.CommonApplicationData)</param>
+		/// <param name="iconForProgressDialogInTaskBar"> </param>
 		/// <param name="namespaceBeginnings">A list of namespace beginnings indicating
 		/// what types to scan for localized string calls. For example, to only scan
 		/// types found in Pa.exe and assuming all types in that assembly begin with
 		/// 'Pa', then this value would only contain the string 'Pa'.</param>
 		/// ------------------------------------------------------------------------------------
 		public static LocalizationManager Create(string desiredUiLangId, string appId,
-			string appName, string appVersion, string installedTmxFilePath, string targetTmxFilePath,
+			string appName, string appVersion, string installedTmxFilePath, string targetTmxFilePath, Icon iconForProgressDialogInTaskBar,
 			params string[] namespaceBeginnings)
 		{
+			_iconForProgressDialogInTaskBar = iconForProgressDialogInTaskBar;
 			if (targetTmxFilePath == null)
 			{
 				targetTmxFilePath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
@@ -98,20 +107,34 @@ namespace Localization
 			AppVersion = appVersion;
 			TmxFileFolder = tmxFolder;
 
-			// Make sure the folder exists.
-			if (!Directory.Exists(TmxFileFolder))
-				Directory.CreateDirectory(TmxFileFolder);
+			try
+			{
+				new FileIOPermission(FileIOPermissionAccess.Write, TmxFileFolder).Demand();
+				CanCustomizeLocalizations = true;
+				// Make sure the folder exists.
+				if (!Directory.Exists(TmxFileFolder))
+					Directory.CreateDirectory(TmxFileFolder);
 
-			DefaultStringFilePath = Path.Combine(TmxFileFolder, Id + "." + kDefaultLang + ".tmx");
-
-			CreateOrUpdateDefaultTmxFileIfNecessary(namespaceBeginnings);
-			CopyInstalledTmxFilesToWritableLocation(installedTmxFilePath);
+				CreateOrUpdateDefaultTmxFileIfNecessary(namespaceBeginnings);
+				CopyInstalledTmxFilesToWritableLocation(installedTmxFilePath);
+			}
+			catch (Exception e)
+			{
+				if (e is SecurityException || e is UnauthorizedAccessException || e is IOException)
+				{
+					CanCustomizeLocalizations = false;
+					// If a user with access to the target folder has never run the application,
+					// fall back to the install location.
+					if (!File.Exists(DefaultStringFilePath))
+						TmxFileFolder = installedTmxFilePath;
+				}
+				else
+					throw;
+			}
 
 			ObjectCache = new Dictionary<object, string>();
 			ToolTipCtrls = new Dictionary<Control, ToolTip>();
 			StringCache = new LocalizedStringCache(this);
-
-			Enabled = true;
 		}
 
 		/// ------------------------------------------------------------------------------------
@@ -127,12 +150,17 @@ namespace Localization
 					return;
 			}
 
+			// Before wasting a bunch of time, make sure we can open the file for writing.
+			var fileStream = File.Open(DefaultStringFilePath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+			fileStream.Close();
+
 			var tmxDoc = LocalizedStringCache.CreateEmptyStringFile();
 			tmxDoc.Header.SetPropValue(kAppVersionPropTag, AppVersion);
 			var tuUpdater = new TransUnitUpdater(tmxDoc);
 
 			using (var dlg = new InitializationProgressDlg(Name, namespaceBeginnings))
 			{
+				dlg.Icon = _iconForProgressDialogInTaskBar;
 				dlg.ShowDialog();
 				foreach (var locInfo in dlg.ExtractedInfo)
 					tuUpdater.Update(locInfo);
@@ -201,8 +229,7 @@ namespace Localization
 				return allLangs;
 
 			var langsHavinglocalizations = (LoadedManagers == null ? new List<string>() :
-				LoadedManagers.Values.Where(lm => lm.Enabled)
-				.SelectMany(lm => lm.StringCache.TmxDocument.GetAllVariantLanguagesFound())
+				LoadedManagers.Values.SelectMany(lm => lm.StringCache.TmxDocument.GetAllVariantLanguagesFound())
 				.Distinct().ToList());
 
 			return from ci in allLangs
@@ -324,13 +351,6 @@ namespace Localization
 
 		/// ------------------------------------------------------------------------------------
 		/// <summary>
-		/// Gets a value indicating whether or not localization support is enabled.
-		/// </summary>
-		/// ------------------------------------------------------------------------------------
-		public bool Enabled { get; set; }
-
-		/// ------------------------------------------------------------------------------------
-		/// <summary>
 		/// This is what identifies a localization manager for a particular set of
 		/// localized strings. This would likely be a DLL or EXE name like 'PA' or 'SayMore'.
 		/// This will be the file name of the portion of the TMX file in which localized
@@ -370,22 +390,25 @@ namespace Localization
 
 		/// ------------------------------------------------------------------------------------
 		/// <summary>
-		/// Gets the full path (without file nanme) to the TMX file.
+		/// Gets a value indicating whether or not user has authority to change localized strings.
 		/// </summary>
 		/// ------------------------------------------------------------------------------------
-		public string TmxFileFolder { get; private set; }
+		public bool CanCustomizeLocalizations { get; private set; }
 
 		/// ------------------------------------------------------------------------------------
 		/// <summary>
-		/// Gets a value indicating whether or not the dialog box for localizing items can
-		/// be shown. It will only be shown if the current UI language is not the default.
+		/// Gets the full path (without file nanme) to the TMX file.
 		/// </summary>
 		/// ------------------------------------------------------------------------------------
-		public bool CanShowLocalizeItemDialogBox
+		public string TmxFileFolder
 		{
-			get { return Enabled; }
+			get { return m_tmxFileFolder; }
+			private set
+			{
+				m_tmxFileFolder = value;
+				DefaultStringFilePath = GetTmxPathForLanguage(kDefaultLang);
+			}
 		}
-
 		#endregion
 
 		#region Methods for caching and localizing objects.
@@ -398,7 +421,7 @@ namespace Localization
 		internal bool RegisterObjectForLocalizing(object obj, string id, string defaultText,
 			string defaultTooltip, string defaultShortcutKeys, string comment)
 		{
-			if (!Enabled || obj == null || id == null || id.Trim() == string.Empty)
+			if (obj == null || id == null || id.Trim() == string.Empty)
 				return false;
 
 			try
@@ -467,6 +490,26 @@ namespace Localization
 			}
 		}
 
+		/// ------------------------------------------------------------------------------------
+		internal void SaveIfDirty()
+		{
+			try
+			{
+				StringCache.SaveIfDirty();
+			}
+			catch (IOException e)
+			{
+				CanCustomizeLocalizations = false;
+				MessageBox.Show(e.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			}
+
+		}
+
+		/// ------------------------------------------------------------------------------------
+		internal string GetTmxPathForLanguage(string langId)
+		{
+			return Path.Combine(TmxFileFolder, string.Format("{0}.{1}.tmx", Id, langId));
+		}
 		#endregion
 
 		#region Methods for adding localized strings to cache.
@@ -511,8 +554,7 @@ namespace Localization
 		/// ------------------------------------------------------------------------------------
 		public string GetLocalizedString(string id, string defaultText)
 		{
-			var text = (Enabled && UILanguageId != kDefaultLang ?
-				GetStringFromStringCache(UILanguageId, id) : null);
+			var text = (UILanguageId != kDefaultLang ? GetStringFromStringCache(UILanguageId, id) : null);
 
 			return (text ?? StripOffLocalizationInfoFromText(defaultText));
 		}
@@ -664,15 +706,14 @@ namespace Localization
 			}
 
 			lm.StringCache.UpdateLocalizedInfo(locInfo);
-			lm.StringCache.SaveIfDirty();
+			lm.SaveIfDirty();
 			return englishText;
 		}
 
 		/// ------------------------------------------------------------------------------------
 		public static bool GetIsStringAvailableForLangId(string id, string langId)
 		{
-			return LoadedManagers.Values.Where(lm => lm.Enabled)
-				.Select(lm => lm.StringCache.GetString(langId, id))
+			return LoadedManagers.Values.Select(lm => lm.StringCache.GetString(langId, id))
 				.FirstOrDefault(txt => txt != null) != null;
 		}
 
@@ -695,23 +736,21 @@ namespace Localization
 			if (UILanguageId == kDefaultLang)
 				return null;
 
-			return LoadedManagers.Values.Where(m => m.Enabled)
-				.Select(lm => lm.StringCache.GetString(UILanguageId, id))
+			return LoadedManagers.Values.Select(lm => lm.StringCache.GetString(UILanguageId, id))
 				.FirstOrDefault(text => text != null);
 		}
 
 		/// ------------------------------------------------------------------------------------
 		private static LocalizationManager GetLocalizationManagerForObject(object obj)
 		{
-			return LoadedManagers.Values.Where(m => m.Enabled)
-				.FirstOrDefault(lm => lm.ObjectCache.ContainsKey(obj));
+			return LoadedManagers.Values.FirstOrDefault(lm => lm.ObjectCache.ContainsKey(obj));
 		}
 
 		/// ------------------------------------------------------------------------------------
 		private static LocalizationManager GetLocalizationManagerForString(string id)
 		{
 			return LoadedManagers.Values.FirstOrDefault(
-				lm => lm.Enabled && lm.StringCache.GetString(UILanguageId, id) != null);
+				lm => lm.StringCache.GetString(UILanguageId, id) != null);
 		}
 
 		#endregion
@@ -728,7 +767,7 @@ namespace Localization
 			if (LoadedManagers == null)
 				return;
 
-			foreach (var lm in LoadedManagers.Values.Where(lm => lm.Enabled))
+			foreach (var lm in LoadedManagers.Values)
 				lm.ReapplyLocalizationsToAllObjects();
 		}
 		/// ------------------------------------------------------------------------------------
@@ -755,9 +794,6 @@ namespace Localization
 		/// ------------------------------------------------------------------------------------
 		internal void ReapplyLocalizationsToAllObjects()
 		{
-			if (!Enabled)
-				return;
-
 			foreach (object obj in ObjectCache.Keys)
 				ApplyLocalization(obj);
 
@@ -773,9 +809,6 @@ namespace Localization
 		/// ------------------------------------------------------------------------------------
 		public void RefreshToolTips()
 		{
-			if (!Enabled)
-				return;
-
 			foreach (var toolTipCtrl in ToolTipCtrls.Values)
 				toolTipCtrl.Dispose();
 
