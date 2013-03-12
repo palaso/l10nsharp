@@ -79,6 +79,7 @@
 			this._labelSrcToolTip = new System.Windows.Forms.Label();
 			this._textBoxSrcToolTip = new System.Windows.Forms.TextBox();
 			this._panelButtons = new System.Windows.Forms.Panel();
+			this._howToDistribute = new System.Windows.Forms.LinkLabel();
 			this._buttonFallbackLanguages = new System.Windows.Forms.Button();
 			this.toolStrip = new System.Windows.Forms.ToolStrip();
 			this.tbbCopy = new System.Windows.Forms.ToolStripDropDownButton();
@@ -99,6 +100,7 @@
 			this._groupBoxComment.SuspendLayout();
 			this._groupBoxImage.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this._pictureImage)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
 			this.splitContainer.Panel1.SuspendLayout();
 			this.splitContainer.Panel2.SuspendLayout();
 			this.splitContainer.SuspendLayout();
@@ -144,7 +146,7 @@
 			//
 			this._buttonOK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this._buttonOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this._buttonOK.Location = new System.Drawing.Point(658, 7);
+			this._buttonOK.Location = new System.Drawing.Point(662, 7);
 			this._buttonOK.Name = "_buttonOK";
 			this._buttonOK.Size = new System.Drawing.Size(75, 26);
 			this._buttonOK.TabIndex = 1;
@@ -155,7 +157,7 @@
 			//
 			this._buttonCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this._buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this._buttonCancel.Location = new System.Drawing.Point(739, 7);
+			this._buttonCancel.Location = new System.Drawing.Point(743, 7);
 			this._buttonCancel.Name = "_buttonCancel";
 			this._buttonCancel.Size = new System.Drawing.Size(75, 26);
 			this._buttonCancel.TabIndex = 2;
@@ -244,8 +246,8 @@
 			this.splitContainer.Panel2.Controls.Add(this._toolStripRightSide);
 			this.splitContainer.Panel2.Controls.Add(this._tableLayout);
 			this.splitContainer.Panel2.Padding = new System.Windows.Forms.Padding(0, 7, 5, 0);
-			this.splitContainer.Size = new System.Drawing.Size(822, 436);
-			this.splitContainer.SplitterDistance = 268;
+			this.splitContainer.Size = new System.Drawing.Size(826, 456);
+			this.splitContainer.SplitterDistance = 269;
 			this.splitContainer.SplitterWidth = 6;
 			this.splitContainer.TabIndex = 0;
 			//
@@ -256,7 +258,7 @@
 			this._treeView.HideSelection = false;
 			this._treeView.Location = new System.Drawing.Point(8, 37);
 			this._treeView.Name = "_treeView";
-			this._treeView.Size = new System.Drawing.Size(260, 399);
+			this._treeView.Size = new System.Drawing.Size(261, 419);
 			this._treeView.TabIndex = 1;
 			this._treeView.BeforeSelect += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleTreeViewBeforeSelect);
 			//
@@ -269,7 +271,7 @@
 			this._labelGroups});
 			this._toolStripLeftSide.Location = new System.Drawing.Point(8, 7);
 			this._toolStripLeftSide.Name = "_toolStripLeftSide";
-			this._toolStripLeftSide.Size = new System.Drawing.Size(260, 30);
+			this._toolStripLeftSide.Size = new System.Drawing.Size(261, 30);
 			this._toolStripLeftSide.TabIndex = 0;
 			this._toolStripLeftSide.Text = "toolStrip2";
 			//
@@ -291,7 +293,7 @@
 			this._buttonMoveNext.DrawRightArrowButton = false;
 			this._buttonMoveNext.Font = new System.Drawing.Font("Marlett", 9F);
 			this._buttonMoveNext.Image = global::Localization.Properties.Resources.kimidMoveNext;
-			this._buttonMoveNext.Location = new System.Drawing.Point(414, 113);
+			this._buttonMoveNext.Location = new System.Drawing.Point(415, 133);
 			this._buttonMoveNext.Name = "_buttonMoveNext";
 			this._buttonMoveNext.Size = new System.Drawing.Size(20, 20);
 			this._buttonMoveNext.TabIndex = 2;
@@ -404,7 +406,7 @@
 			this._buttonMovePrev.DrawRightArrowButton = false;
 			this._buttonMovePrev.Font = new System.Drawing.Font("Marlett", 9F);
 			this._buttonMovePrev.Image = global::Localization.Properties.Resources.kimidMovePrevious;
-			this._buttonMovePrev.Location = new System.Drawing.Point(414, 87);
+			this._buttonMovePrev.Location = new System.Drawing.Point(415, 107);
 			this._buttonMovePrev.Name = "_buttonMovePrev";
 			this._buttonMovePrev.Size = new System.Drawing.Size(20, 20);
 			this._buttonMovePrev.TabIndex = 1;
@@ -425,7 +427,7 @@
 			this._labelSourceLang});
 			this._toolStripRightSide.Location = new System.Drawing.Point(0, 7);
 			this._toolStripRightSide.Name = "_toolStripRightSide";
-			this._toolStripRightSide.Size = new System.Drawing.Size(543, 30);
+			this._toolStripRightSide.Size = new System.Drawing.Size(546, 30);
 			this._toolStripRightSide.TabIndex = 2;
 			this._toolStripRightSide.Text = "toolStrip1";
 			//
@@ -751,14 +753,28 @@
 			// _panelButtons
 			//
 			this._panelButtons.BackColor = System.Drawing.Color.Transparent;
+			this._panelButtons.Controls.Add(this._howToDistribute);
 			this._panelButtons.Controls.Add(this._buttonFallbackLanguages);
 			this._panelButtons.Controls.Add(this._buttonCancel);
 			this._panelButtons.Controls.Add(this._buttonOK);
 			this._panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this._panelButtons.Location = new System.Drawing.Point(0, 436);
+			this._panelButtons.Location = new System.Drawing.Point(0, 456);
 			this._panelButtons.Name = "_panelButtons";
-			this._panelButtons.Size = new System.Drawing.Size(822, 41);
+			this._panelButtons.Size = new System.Drawing.Size(826, 41);
 			this._panelButtons.TabIndex = 1;
+			//
+			// _howToDistribute
+			//
+			this._howToDistribute.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this._howToDistribute.AutoSize = true;
+			this._howToDistribute.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this._howToDistribute.Location = new System.Drawing.Point(392, 12);
+			this._howToDistribute.Name = "_howToDistribute";
+			this._howToDistribute.Size = new System.Drawing.Size(248, 17);
+			this._howToDistribute.TabIndex = 3;
+			this._howToDistribute.TabStop = true;
+			this._howToDistribute.Text = "How to distribute your translation work";
+			this._howToDistribute.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this._howToDistribute_LinkClicked);
 			//
 			// _buttonFallbackLanguages
 			//
@@ -894,9 +910,9 @@
 			this._statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
 			this._labelCount,
 			this._progressBar});
-			this._statusStrip.Location = new System.Drawing.Point(0, 477);
+			this._statusStrip.Location = new System.Drawing.Point(0, 497);
 			this._statusStrip.Name = "_statusStrip";
-			this._statusStrip.Size = new System.Drawing.Size(822, 22);
+			this._statusStrip.Size = new System.Drawing.Size(826, 22);
 			this._statusStrip.TabIndex = 2;
 			this._statusStrip.Text = "statusStrip1";
 			//
@@ -905,7 +921,7 @@
 			this._labelCount.BackColor = System.Drawing.Color.Transparent;
 			this._labelCount.Margin = new System.Windows.Forms.Padding(0, 3, 5, 2);
 			this._labelCount.Name = "_labelCount";
-			this._labelCount.Size = new System.Drawing.Size(802, 17);
+			this._labelCount.Size = new System.Drawing.Size(806, 17);
 			this._labelCount.Spring = true;
 			this._labelCount.Text = "#";
 			this._labelCount.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -924,7 +940,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.SystemColors.Control;
-			this.ClientSize = new System.Drawing.Size(822, 499);
+			this.ClientSize = new System.Drawing.Size(826, 519);
 			this.Controls.Add(this.splitContainer);
 			this.Controls.Add(this._panelButtons);
 			this.Controls.Add(this._statusStrip);
@@ -943,6 +959,7 @@
 			((System.ComponentModel.ISupportInitialize)(this._pictureImage)).EndInit();
 			this.splitContainer.Panel1.ResumeLayout(false);
 			this.splitContainer.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.splitContainer)).EndInit();
 			this.splitContainer.ResumeLayout(false);
 			this._toolStripLeftSide.ResumeLayout(false);
 			this._toolStripLeftSide.PerformLayout();
@@ -959,6 +976,7 @@
 			this._groupBoxSrcTranslation.ResumeLayout(false);
 			this._groupBoxSrcTranslation.PerformLayout();
 			this._panelButtons.ResumeLayout(false);
+			this._panelButtons.PerformLayout();
 			this.toolStrip.ResumeLayout(false);
 			this.toolStrip.PerformLayout();
 			this._statusStrip.ResumeLayout(false);
@@ -1036,5 +1054,6 @@
 		private System.Windows.Forms.DataGridViewTextBoxColumn _colSrcToolTip;
 		private System.Windows.Forms.DataGridViewTextBoxColumn _colTgtToolTip;
 		private System.Windows.Forms.DataGridViewTextBoxColumn _colComments;
+		private System.Windows.Forms.LinkLabel _howToDistribute;
 	}
 }
