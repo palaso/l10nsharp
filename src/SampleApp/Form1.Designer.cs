@@ -30,7 +30,7 @@
 		{
 			this.components = new System.ComponentModel.Container();
 			this.localizationExtender1 = new L10NSharp.UI.L10NSharpExtender(this.components);
-			this.button1 = new System.Windows.Forms.Button();
+			this._getDynamicStringButton = new System.Windows.Forms.Button();
 			this.label1 = new System.Windows.Forms.Label();
 			this.label2 = new System.Windows.Forms.Label();
 			this.uiLanguageComboBox1 = new L10NSharp.UI.UILanguageComboBox();
@@ -45,15 +45,16 @@
 			//
 			// button1
 			//
-			this.localizationExtender1.SetLocalizableToolTip(this.button1, null);
-			this.localizationExtender1.SetLocalizationComment(this.button1, null);
-			this.localizationExtender1.SetLocalizingId(this.button1, "TheSampleForm.button1");
-			this.button1.Location = new System.Drawing.Point(38, 161);
-			this.button1.Name = "button1";
-			this.button1.Size = new System.Drawing.Size(75, 23);
-			this.button1.TabIndex = 0;
-			this.button1.Text = "A Button";
-			this.button1.UseVisualStyleBackColor = true;
+			this.localizationExtender1.SetLocalizableToolTip(this._getDynamicStringButton, null);
+			this.localizationExtender1.SetLocalizationComment(this._getDynamicStringButton, null);
+			this.localizationExtender1.SetLocalizingId(this._getDynamicStringButton, "TheSampleForm.button1");
+			this._getDynamicStringButton.Location = new System.Drawing.Point(38, 161);
+			this._getDynamicStringButton.Name = "_getDynamicStringButton";
+			this._getDynamicStringButton.Size = new System.Drawing.Size(126, 23);
+			this._getDynamicStringButton.TabIndex = 0;
+			this._getDynamicStringButton.Text = "Get Name Dynamically";
+			this._getDynamicStringButton.UseVisualStyleBackColor = true;
+			this._getDynamicStringButton.Click += new System.EventHandler(this.button1_Click);
 			//
 			// label1
 			//
@@ -120,7 +121,7 @@
 			this.Controls.Add(this.uiLanguageComboBox1);
 			this.Controls.Add(this.label2);
 			this.Controls.Add(this.label1);
-			this.Controls.Add(this.button1);
+			this.Controls.Add(this._getDynamicStringButton);
 			this.localizationExtender1.SetLocalizableToolTip(this, null);
 			this.localizationExtender1.SetLocalizationComment(this, null);
 			this.localizationExtender1.SetLocalizingId(this, "Form1.WindowTitle");
@@ -138,7 +139,7 @@
 		#endregion
 
 		private L10NSharp.UI.L10NSharpExtender localizationExtender1;
-		private System.Windows.Forms.Button button1;
+		private System.Windows.Forms.Button _getDynamicStringButton;
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.Label label2;
 		private L10NSharp.UI.UILanguageComboBox uiLanguageComboBox1;
