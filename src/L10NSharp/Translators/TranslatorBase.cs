@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Web;
-using Palaso.Network;
+using L10NSharp.Utility;
 
 namespace L10NSharp.Translators
 {
