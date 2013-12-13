@@ -136,6 +136,7 @@ namespace L10NSharp
 			AppVersion = appVersion;
 			TmxFileFolder = directoryOfUserModifiedTmxFiles;
 			NamespaceBeginnings = namespaceBeginnings;
+			CollectUpNewStringsDiscoveredDynamically = true;
 
 			try
 			{
@@ -145,7 +146,14 @@ namespace L10NSharp
 				if (!Directory.Exists(TmxFileFolder))
 					Directory.CreateDirectory(TmxFileFolder);
 
+#if !__MonoCS__
+				// This method is crashing with a segmentation fault on Linux whenever this code
+				// is run over Palaso.dll, trying to create a new Palaso.en.tmx.  This appears to
+				// be a bug in MethodBase.GetMethodBytes() called in ILReader.ILReader(MethodBase).
+				// Other assemblies are processed with any trouble, and most of Palaso.dll is
+				// processed before the crash occurs.
 				CreateOrUpdateDefaultTmxFileIfNecessary(namespaceBeginnings);
+#endif
 				CopyInstalledTmxFilesToWritableLocation(directoryOfInstalledTmxFiles);
 			}
 			catch (Exception e)
@@ -177,10 +185,8 @@ namespace L10NSharp
 				var verElement = xmlDoc.Element("header").Elements("prop")
 					.FirstOrDefault(e => (string)e.Attribute("type") == kAppVersionPropTag);
 
-#if !DEBUG //!!!!!!!!!!!!**************REMOVE
 				if (verElement != null && new Version(verElement.Value) >= new Version(AppVersion ?? "0.0.1"))
 					return;
-#endif
 			}
 
 			// Before wasting a bunch of time, make sure we can open the file for writing.
@@ -306,21 +312,21 @@ namespace L10NSharp
 		/// ------------------------------------------------------------------------------------
 //		public static void ShowLocalizationDialogBox()
 //		{
-//            TipDialog.Show("If you click on an item while you hold ctrl and shift keys down, this tool will open up with that item already selected.");
+//            TipDialog.Show("If you click on an item while you hold alt and shift keys down, this tool will open up with that item already selected.");
 //            LocalizeItemDlg.ShowDialog(null, null, false);
 //		}
 
 		/// ------------------------------------------------------------------------------------
 		public static void ShowLocalizationDialogBox(object ctrl)
 		{
-			TipDialog.Show("If you click on an item while you hold ctrl and shift keys down, this tool will open up with that item already selected.");
+			TipDialog.Show("If you click on an item while you hold alt and shift keys down, this tool will open up with that item already selected.");
 			LocalizeItemDlg.ShowDialog(GetLocalizationManagerForObject(ctrl), ctrl, false);
 		}
 
 		/// ------------------------------------------------------------------------------------
 		public static void ShowLocalizationDialogBox(string id)
 		{
-			TipDialog.Show("If you click on an item while you hold ctrl and shift keys down, this tool will open up with that item already selected.");
+			TipDialog.Show("If you click on an item while you hold alt and shift keys down, this tool will open up with that item already selected.");
 			LocalizeItemDlg.ShowDialog(GetLocalizationManagerForString(id), id, false);
 		}
 
@@ -356,9 +362,16 @@ namespace L10NSharp
 				if (s_uiLangId == null)
 				{
 					s_uiLangId = Thread.CurrentThread.CurrentUICulture.Name;
-					int i = s_uiLangId.IndexOf('-');
+#if __MonoCS__
+					// The current version of Mono does not define a CultureInfo for "zh", so
+					// it tends to throw exceptions when we try to use just plain "zh".
+					if (s_uiLangId == "zh-CN")
+						return s_uiLangId;
+					// Otherwise, we want the culture.neutral version.
+#endif
+					int i = s_uiLangId.IndexOf ('-');
 					if (i >= 0)
-						s_uiLangId = s_uiLangId.Substring(0, i);
+						s_uiLangId = s_uiLangId.Substring (0, i);
 				}
 
 				return s_uiLangId;
@@ -524,8 +537,15 @@ namespace L10NSharp
 			}
 		}
 
+		public enum WhatToDoIfCannotSave
+		{
+			Nothing,
+			MessageBox,
+			Exception
+		};
+
 		/// ------------------------------------------------------------------------------------
-		internal void SaveIfDirty()
+		internal void SaveIfDirty(WhatToDoIfCannotSave whatToDoIfCannotSave)
 		{
 			try
 			{
@@ -534,7 +554,18 @@ namespace L10NSharp
 			catch (IOException e)
 			{
 				CanCustomizeLocalizations = false;
-				MessageBox.Show(e.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				switch (whatToDoIfCannotSave)
+				{
+					case WhatToDoIfCannotSave.Nothing:
+						break;
+					case WhatToDoIfCannotSave.MessageBox:
+						MessageBox.Show(e.Message, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						break;
+					case WhatToDoIfCannotSave.Exception:
+						throw e;
+					default:
+						throw new ArgumentOutOfRangeException("whatToDoIfCannotSave");
+				}
 			}
 
 		}
@@ -737,6 +768,9 @@ namespace L10NSharp
 			if (text != null)
 				return text;
 
+			if (!lm.CollectUpNewStringsDiscoveredDynamically)
+				return englishText;
+
 			var locInfo = new LocalizingInfo(id) { LangId = kDefaultLang, Text = englishText };
 			locInfo.DiscoveredDynamically = true;
 			locInfo.UpdateFields = UpdateFields.Text;
@@ -749,9 +783,19 @@ namespace L10NSharp
 
 
 			lm.StringCache.UpdateLocalizedInfo(locInfo);
-			lm.SaveIfDirty();
+			lm.SaveIfDirty(WhatToDoIfCannotSave.Nothing);// this will be common for GetDynamic string on users restricted from writing to ProgramData
 			return englishText;
 		}
+
+		/// <summary>
+		/// Set this to false if you don't want users to pollute tmx files they might send to you
+		/// with strings that are unique to their documents. For example, Bloom looks for strings
+		/// in html that might have been localized; but Bloom doesn't want to ship an ever-growing
+		/// list of discovered strings for people to translate that aren't actually part of what you get
+		/// with Bloom. So it sets this to False unless the app was compiled in DEBUG mode.
+		/// Default is true.
+		/// </summary>
+		public bool CollectUpNewStringsDiscoveredDynamically { get; set; }
 
 		/// ------------------------------------------------------------------------------------
 		public static bool GetIsStringAvailableForLangId(string id, string langId)
@@ -1080,7 +1124,7 @@ namespace L10NSharp
 			get
 			{
 				return EnableClickingOnControlToBringUpLocalizationDialog &&
-					Control.ModifierKeys == (Keys.Shift | Keys.Control);
+					Control.ModifierKeys == (Keys.Alt | Keys.Shift);
 			}
 		}
 

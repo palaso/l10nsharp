@@ -1,6 +1,6 @@
 
 _ReSharper*
-Output/
+output/
 obj/
 *.suo
 *.user
